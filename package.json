@@ -1,0 +1,20 @@
+{
+  "name": "dumptopg",
+  "version": "1.0.0",
+  "description": "Connects to dump1090 and logs positions to a postgis db",
+  "main": "log.js",
+  "scripts": {
+    "start": "babel-node log.js"
+  },
+  "author": "Ben Elsen <mail@benelsen.com> (https://benelsen.com)",
+  "license": "ISC",
+  "dependencies": {
+    "babel": "^5.8.21",
+    "moment": "^2.10.6",
+    "pg": "^4.4.1",
+    "ramda": "^0.17.1",
+    "sbs1": "^0.2.3",
+    "split2": "^1.0.0",
+    "sql-bricks": "^1.2.1"
+  }
+}
