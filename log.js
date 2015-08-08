@@ -4,33 +4,36 @@ import net from 'net'
 import pg from 'pg'
 import sbs1 from 'sbs1'
 import moment from 'moment'
+import minimist from 'minimist'
 import streamSplit from 'split2'
 import sql, {insert} from 'sql-bricks'
 import {compose, filter, pick, curry, propEq, propIs, head, concat, join, take} from 'ramda'
 
 import {Maybe, map} from './fun'
 
-const dump1090Client = net.connect({
-  host: 'hayford.local',
-  port: 30003,
-})
+import 'core-js/fn/map'
+import 'core-js/fn/string'
 
-dump1090Client.on('connect', log('connect') )
-dump1090Client.on('end', log('end') )
-dump1090Client.on('close', log('close') )
-dump1090Client.on('error', log('error') )
+const argv = minimist(process.argv.slice(2), {
+  alias: {
+    host: ['h'],
+    port: ['p'],
+    pgurl: ['db', 'd']
+  },
+  default: {
+    host: 'localhost',
+    port: 30003,
+    pgurl: 'postgres://localhost/adsb'
+  }
+})
 
 const store = new Map()
 let count = 0
 let currentHour
 
-pg.connect('postgres://localhost/adsb', function (err, client, done) {
+pg.connect(argv.pgurl, function (err, client, done) {
 
-  startStream(client)
-
-  dump1090Client.on('end', function () {
-    startStream(client)
-  })
+  startStream(client, 0)
 
 })
 
@@ -40,13 +43,38 @@ function log (prefix) {
   }
 }
 
-function startStream (client) {
+function startStream (client, attempts) {
+
+  console.log(attempts)
+
+  if ( attempts > 1 ) {
+    throw new Error('can’t connect to dump1090')
+  }
 
   console.log('start stream')
 
-  dump1090Client
-    .pipe(streamSplit())
-    .on('data', compose(map(insertDB(client)), Maybe.of, enhance, sbs1.parseSbs1Message) )
+  const dump1090Client = net.connect({host: argv.host, port: argv.port})
+
+  dump1090Client.on('connect', function () {
+
+    attempts = 0
+
+    dump1090Client
+      .pipe(streamSplit())
+      .on('data', compose(map(insertDB(client)), Maybe.of, enhance, sbs1.parseSbs1Message) )
+
+  })
+
+  dump1090Client.on('close', function () {
+    startStream(client, attempts+1)
+  })
+
+  dump1090Client.on('connect', log('connect') )
+  dump1090Client.on('close', log('close') )
+  dump1090Client.on('error', log('error') )
+  dump1090Client.on('end', log('end') )
+
+  return dump1090Client
 
 }
 
