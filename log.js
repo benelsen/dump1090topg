@@ -136,7 +136,7 @@ function insertDB (client) {
         count = 0
       }
 
-      console.log(`${(count++).toString().lpad(6)}: ${obj.generated} - ${obj.icao} ${obj.callsign ? rpad(10, obj.callsign) : rpad(10, '')} ${lpad(5, obj.altitude.toString())} (${coordsLogFormat(obj.coordinates)})`)
+      console.log(`${(count++).toString().lpad(6)}: ${obj.generated} - ${obj.icao} ${obj.callsign ? rpad(10, obj.callsign) : rpad(10, '')} ${lpad(6, obj.altitude.toString())} (${coordsLogFormat(obj.coordinates)})`)
 
     })
   }
@@ -154,7 +154,7 @@ const rpad = curry( (n, string) => {
   return string.rpad(n)
 })
 
-const coordsLogFormat = compose(join(', '), map(lpad(8)), map(toFixed(4)), take(2))
+const coordsLogFormat = compose(join(', '), map(lpad(9)), map(toFixed(4)), take(2))
 
 function trim (string) {
   return string.trim()
@@ -187,10 +187,6 @@ function enhance (obj) {
 
   const date = moment.utc(obj.generated_date + ' ' + obj.generated_time, 'YYYY/MM/DD HH:mm:ss.SSS')
   const icao = obj.hex_ident
-
-  if ( !is(icao) ) {
-    return null
-  }
 
   const shortTimeout = date.clone().add(10, 'seconds');
   const longTimeout = date.clone().add(30*60, 'seconds');
