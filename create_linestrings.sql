@@ -63,6 +63,6 @@ SELECT
   MIN(out_date) as start,
   MAX(out_date) as end,
   ST_Makeline(out_geom) as geom
-FROM group_messages( '30 seconds'::INTERVAL )
+FROM group_messages( '60 seconds'::INTERVAL )
 GROUP BY out_line_id
 ORDER BY "end";

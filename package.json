@@ -18,6 +18,8 @@
     "ramda": "^0.17.1",
     "sbs1": "^0.2.3",
     "split2": "^1.0.0",
-    "sql-bricks": "^1.2.1"
+    "sql-bricks": "^1.2.1",
+    "turf-distance": "^1.0.1",
+    "turf-point": "^2.0.1"
   }
 }

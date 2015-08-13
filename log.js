@@ -6,6 +6,8 @@ import sbs1 from 'sbs1'
 import moment from 'moment'
 import minimist from 'minimist'
 import streamSplit from 'split2'
+import turfDistance from 'turf-distance'
+import point from 'turf-point'
 import sql, {insert} from 'sql-bricks'
 import {compose, filter, pick, curry, propEq, propIs, head, concat, join, take} from 'ramda'
 
@@ -18,14 +20,23 @@ const argv = minimist(process.argv.slice(2), {
   alias: {
     host: ['h'],
     port: ['p'],
-    pgurl: ['db', 'd']
+    pgurl: ['db', 'd'],
+    range: ['r']
   },
   default: {
     host: 'localhost',
     port: 30003,
-    pgurl: 'postgres://localhost/adsb'
+    pgurl: 'postgres://localhost/adsb',
+    range: 500
   }
 })
+
+const maxDistance = +argv.range * 1e3
+
+let position
+if ( is(argv.lon) && is(argv.lat) ) {
+  position = [argv.lon, argv.lat]
+}
 
 const store = new Map()
 let count = 0
@@ -183,6 +194,44 @@ function rateLimited(store, icao, date) {
 
 }
 
+const distance = curry(function(from, to) {
+  return turfDistance(point(from), point(to), 'radians') * 6378137
+})
+
+const distanceToReceiver = distance(position)
+
+const lte = curry(function(test, value) {
+  return value <= test
+})
+
+const isWithin = function(r, ...rest) {
+  return compose(lte(r), distanceToReceiver)(...rest)
+}
+
+function mapKey(icao, field) {
+  return `${icao}+${field}`;
+}
+
+function setForHex(store, icao, key, value, expires) {
+  set(store, mapKey(icao, key), value, expires)
+}
+
+function getForHex(store, icao, key, date) {
+  return get(store, mapKey(icao, key), date)
+}
+
+function set (store, key, value, expires) {
+  store.set(key, {value: value, expires: expires.toISOString()})
+}
+
+function get (store, key, date) {
+  const obj = store.get(key)
+  if ( obj && date.isBefore(obj.expires) ) {
+    return obj.value
+  }
+  return null
+}
+
 function enhance (obj) {
 
   const date = moment.utc(obj.generated_date + ' ' + obj.generated_time, 'YYYY/MM/DD HH:mm:ss.SSS')
@@ -217,6 +266,11 @@ function enhance (obj) {
 
   if ( obj.lat && obj.lon && !rateLimited(store, icao, date) ) {
 
+    if ( position && !isWithin(maxDistance, [obj.lon, obj.lat]) ) {
+      console.log('Too far:', obj.hex_ident)
+      return null
+    }
+
     return {
       icao: icao,
       generated: date.toISOString(),
@@ -233,29 +287,5 @@ function enhance (obj) {
     return null
   }
 
-}
-
-function mapKey(icao, field) {
-  return `${icao}+${field}`;
-}
-
-function setForHex(store, icao, key, value, expires) {
-  set(store, mapKey(icao, key), value, expires)
-}
-
-function getForHex(store, icao, key, date) {
-  return get(store, mapKey(icao, key), date)
-}
-
-function set (store, key, value, expires) {
-  store.set(key, {value: value, expires: expires.toISOString()})
-}
-
-function get (store, key, date) {
-  const obj = store.get(key)
-  if ( obj && date.isBefore(obj.expires) ) {
-    return obj.value
-  }
-  return null
 }
 
