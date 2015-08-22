@@ -1,6 +1,7 @@
 # dump1090topg
 
 Inserts the SBS1 output of dump1090 into a postgis database.
+(Also hydrates the position reports with callsign, track, vertical speed etc. from non-position reports.)
 
 ## Usage
 
